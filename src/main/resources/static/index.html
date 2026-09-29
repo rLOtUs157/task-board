@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>任务看板</title>
+    <style>
+        body{font-family:'Microsoft YaHei',sans-serif;background:#f0f2f5;margin:0;padding:20px}
+        h1{text-align:center;color:#333}
+        .add-form{background:#fff;border-radius:8px;padding:16px;max-width:640px;margin:0 auto;box-shadow:0 1px 3px rgba(0,0,0,.1);display:flex;flex-wrap:wrap;gap:8px}
+        .add-form input,.add-form select{flex:1 1 48%;padding:8px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box}
+        .add-form button{padding:8px 20px;background:#5b8ff9;color:#fff;border:none;border-radius:4px;cursor:pointer;flex:1 1 100%}
+        .board{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+        .column{background:#ebecf0;border-radius:8px;padding:12px;width:300px;min-height:200px}
+        .column h2{font-size:16px;text-align:center;padding:6px;border-radius:4px;color:#fff;margin:0 0 12px}
+        .todo .col-title{background:#5b8ff9}
+        .doing .col-title{background:#f6bd16}
+        .done .col-title{background:#5ad8a6}
+        .card{background:#fff;border-radius:6px;padding:10px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+        .card h3{margin:0 0 4px;font-size:14px;color:#333}
+        .card p{margin:0 0 6px;font-size:12px;color:#666}
+        .card .btns{margin-top:6px}
+        .card button{margin-right:6px;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px}
+        .btn-next{background:#5b8ff9;color:#fff}
+        .btn-edit{background:#722ed1;color:#fff}
+        .btn-del{background:#f5222d;color:#fff}
+        .prio{display:inline-block;padding:1px 8px;border-radius:3px;font-size:11px;color:#fff;margin-bottom:4px}
+        .prio.high{background:#f5222d}
+        .prio.mid{background:#fa8c16}
+        .prio.low{background:#52c41a}
+        .dl{font-size:11px;color:#999;margin-top:4px}
+        .dl.overdue{color:#f5222d;font-weight:bold}
+        .empty{color:#999;text-align:center;font-size:13px;padding:20px}
+        .pager{text-align:center;margin-top:16px}
+        .pager button{padding:6px 14px;margin:0 10px;background:#5b8ff9;color:#fff;border:none;border-radius:4px;cursor:pointer}
+        .pager span{font-size:13px;color:#666}
+        .modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:10}
+        .modal{background:#fff;width:360px;margin:8% auto;padding:20px;border-radius:8px}
+        .modal h3{margin-top:0}
+        .modal label{font-size:13px;color:#666;display:block;margin-top:8px}
+        .modal input,.modal select{width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;margin-top:4px}
+        .modal .btns{display:flex;gap:8px;margin-top:14px}
+        .modal .btns button{flex:1;padding:8px;border:none;border-radius:4px;cursor:pointer}
+        .btn-save{background:#5b8ff9;color:#fff}
+        .btn-cancel{background:#d9d9d9;color:#333}
+    </style>
+</head>
+<body>
+<h1>📋 任务看板</h1>
+<div class="add-form">
+    <input id="title" placeholder="任务标题">
+    <input id="content" placeholder="任务详情">
+    <select id="priority">
+        <option value="低">优先级：低</option>
+        <option value="中">优先级：中</option>
+        <option value="高">优先级：高</option>
+    </select>
+    <input id="deadline" type="datetime-local">
+    <button onclick="addTask()">添加任务</button>
+</div>
+<div class="board">
+    <div class="column todo"><h2 class="col-title">待办</h2><div id="todo"></div></div>
+    <div class="column doing"><h2 class="col-title">进行中</h2><div id="doing"></div></div>
+    <div class="column done"><h2 class="col-title">已完成</h2><div id="done"></div></div>
+</div>
+<div class="pager">
+    <button onclick="prevPage()">上一页</button>
+    <span id="pageInfo"></span>
+    <button onclick="nextPage()">下一页</button>
+</div>
+
+<!-- 编辑弹窗 -->
+<div class="modal-bg" id="editModal">
+    <div class="modal">
+        <h3>编辑任务</h3>
+        <label>标题</label><input id="eTitle">
+        <label>详情</label><input id="eContent">
+        <label>状态</label>
+        <select id="eStatus">
+            <option value="待办">待办</option>
+            <option value="进行中">进行中</option>
+            <option value="已完成">已完成</option>
+        </select>
+        <label>优先级</label>
+        <select id="ePriority">
+            <option value="低">低</option>
+            <option value="中">中</option>
+            <option value="高">高</option>
+        </select>
+        <label>截止时间</label><input id="eDeadline" type="datetime-local">
+        <div class="btns">
+            <button class="btn-save" onclick="saveEdit()">保存</button>
+            <button class="btn-cancel" onclick="closeModal()">取消</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    const pageSize = 10;
+    let editingId = null;
+
+    async function loadTasks(){
+        const res = await fetch('/api/tasks?page='+currentPage+'&size='+pageSize);
+        const json = await res.json();
+        if(json.code !== 200){ alert(json.msg); return; }
+        const data = json.data;
+        const tasks = data.content;
+        document.getElementById('todo').innerHTML='';
+        document.getElementById('doing').innerHTML='';
+        document.getElementById('done').innerHTML='';
+        if(tasks.length===0){
+            document.getElementById('todo').innerHTML='<div class="empty">暂无任务</div>';
+        }
+        tasks.forEach(render);
+        document.getElementById('pageInfo').textContent =
+            '第 '+(data.number+1)+' / '+(data.totalPages||1)+' 页，共 '+data.totalElements+' 条';
+    }
+
+    function priorityBadge(p){
+        if(p==='高') return '<span class="prio high">高</span>';
+        if(p==='中') return '<span class="prio mid">中</span>';
+        if(p==='低') return '<span class="prio low">低</span>';
+        return '';
+    }
+
+    function render(t){
+        let target;
+        if(t.status==='待办') target='todo';
+        else if(t.status==='进行中') target='doing';
+        else target='done';
+        const nextText = t.status==='待办' ? '开始' : (t.status==='进行中' ? '完成' : '');
+        const nextStatus = t.status==='待办' ? '进行中' : (t.status==='进行中' ? '已完成' : '待办');
+
+        let deadlineHtml = '';
+        if(t.deadline){
+            const dl = new Date(t.deadline);
+            const overdue = t.status!=='已完成' && dl < new Date();
+            const txt = dl.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+            deadlineHtml = `<div class="dl ${overdue?'overdue':''}">⏰ ${txt}${overdue?'（已超期）':''}</div>`;
+        }
+
+        document.getElementById(target).innerHTML += `
+    <div class="card">
+      ${priorityBadge(t.priority)}
+      <h3>${t.title}</h3>
+      <p>${t.content||''}</p>
+      ${deadlineHtml}
+      <div class="btns">
+        <button class="btn-next" onclick="updateStatus(${t.id},'${nextStatus}')">${nextText}</button>
+        <button class="btn-edit" onclick="openEdit(${t.id})">编辑</button>
+        <button class="btn-del" onclick="delTask(${t.id})">删除</button>
+      </div>
+    </div>`;
+    }
+
+    async function addTask(){
+        const title=document.getElementById('title').value.trim();
+        const content=document.getElementById('content').value.trim();
+        const priority=document.getElementById('priority').value;
+        const deadline=document.getElementById('deadline').value || null;
+        if(!title){ alert('请填写任务标题'); return; }
+        const res = await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,content,status:'待办',priority,deadline})});
+        const json = await res.json();
+        if(json.code !== 200){ alert(json.msg); return; }
+        document.getElementById('title').value='';
+        document.getElementById('content').value='';
+        document.getElementById('deadline').value='';
+        loadTasks();
+    }
+
+    async function openEdit(id){
+        const res = await fetch('/api/tasks/'+id);
+        const json = await res.json();
+        if(json.code !== 200){ alert(json.msg); return; }
+        const t = json.data;
+        editingId = id;
+        document.getElementById('eTitle').value = t.title||'';
+        document.getElementById('eContent').value = t.content||'';
+        document.getElementById('eStatus').value = t.status||'待办';
+        document.getElementById('ePriority').value = t.priority||'低';
+        const dl = t.deadline ? t.deadline.replace(' ','T').slice(0,16) : '';
+        document.getElementById('eDeadline').value = dl;
+        document.getElementById('editModal').style.display='block';
+    }
+
+    function closeModal(){
+        document.getElementById('editModal').style.display='none';
+        editingId=null;
+    }
+
+    async function saveEdit(){
+        const obj = {
+            title: document.getElementById('eTitle').value.trim(),
+            content: document.getElementById('eContent').value.trim(),
+            status: document.getElementById('eStatus').value,
+            priority: document.getElementById('ePriority').value,
+            deadline: document.getElementById('eDeadline').value || null
+        };
+        if(!obj.title){ alert('标题不能为空'); return; }
+        await fetch('/api/tasks/'+editingId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)});
+        closeModal();
+        loadTasks();
+    }
+
+    async function updateStatus(id,status){
+        const res = await fetch('/api/tasks/'+id);
+        const json = await res.json();
+        if(json.code !== 200){ alert(json.msg); return; }
+        const t = json.data;
+        t.status = status;
+        await fetch('/api/tasks/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(t)});
+        loadTasks();
+    }
+
+    async function delTask(id){
+        if(!confirm('确定删除这个任务吗？'))return;
+        await fetch('/api/tasks/'+id,{method:'DELETE'});
+        loadTasks();
+    }
+
+    function prevPage(){
+        if(currentPage > 1){ currentPage--; loadTasks(); }
+    }
+    function nextPage(){ currentPage++; loadTasks(); }
+
+    loadTasks();
+</script>
+</body>
+</html>
