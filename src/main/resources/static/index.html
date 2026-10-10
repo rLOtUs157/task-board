@@ -5,11 +5,22 @@
     <title>任务看板</title>
     <style>
         body{font-family:'Microsoft YaHei',sans-serif;background:#f0f2f5;margin:0;padding:20px}
-        h1{text-align:center;color:#333}
-        .add-form{background:#fff;border-radius:8px;padding:16px;max-width:640px;margin:0 auto;box-shadow:0 1px 3px rgba(0,0,0,.1);display:flex;flex-wrap:wrap;gap:8px}
+        .auth-wrap{max-width:360px;margin:80px auto;background:#fff;border-radius:8px;padding:28px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+        .auth-wrap h2{text-align:center;color:#333;margin-top:0}
+        .auth-wrap input{width:100%;padding:9px;margin:8px 0;border:1px solid #ddd;border-radius:4px;box-sizing:border-box}
+        .auth-wrap button{width:100%;padding:10px;margin-top:8px;border:none;border-radius:4px;cursor:pointer;font-size:14px}
+        .btn-login{background:#5b8ff9;color:#fff}
+        .btn-reg{background:#52c41a;color:#fff}
+        .link{text-align:center;margin-top:12px;font-size:13px;color:#5b8ff9;cursor:pointer}
+        .main{display:none}
+        .topbar{max-width:640px;margin:0 auto 16px;display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:8px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+        .topbar .user{font-size:14px;color:#333;margin-right:12px}
+        .topbar .logout{background:#ff4d4f;color:#fff;border:none;border-radius:4px;padding:6px 14px;cursor:pointer}
+        .topbar h1{text-align:center;color:#333;margin:0;font-size:20px}
+        .add-form{background:#fff;border-radius:8px;padding:16px;max-width:640px;margin:0 auto 16px;box-shadow:0 1px 3px rgba(0,0,0,.1);display:flex;flex-wrap:wrap;gap:8px}
         .add-form input,.add-form select{flex:1 1 48%;padding:8px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box}
         .add-form button{padding:8px 20px;background:#5b8ff9;color:#fff;border:none;border-radius:4px;cursor:pointer;flex:1 1 100%}
-        .board{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+        .board{display:flex;gap:20px;justify-content:center;flex-wrap:wrap}
         .column{background:#ebecf0;border-radius:8px;padding:12px;width:300px;min-height:200px}
         .column h2{font-size:16px;text-align:center;padding:6px;border-radius:4px;color:#fff;margin:0 0 12px}
         .todo .col-title{background:#5b8ff9}
@@ -45,27 +56,40 @@
     </style>
 </head>
 <body>
-<h1>📋 任务看板</h1>
-<div class="add-form">
-    <input id="title" placeholder="任务标题">
-    <input id="content" placeholder="任务详情">
-    <select id="priority">
-        <option value="低">优先级：低</option>
-        <option value="中">优先级：中</option>
-        <option value="高">优先级：高</option>
-    </select>
-    <input id="deadline" type="datetime-local">
-    <button onclick="addTask()">添加任务</button>
+
+<!-- 登录/注册界面 -->
+<div class="auth-wrap" id="authWrap">
+    <h2 id="authTitle">登录</h2>
+    <input id="aUsername" placeholder="用户名">
+    <input id="aPassword" type="password" placeholder="密码">
+    <input id="aNickname" placeholder="昵称(仅注册时需要)" style="display:none">
+    <button class="btn-login" id="btnSubmit" onclick="submitAuth()">登录</button>
+    <div class="link" onclick="toggleMode()" id="toggleLink">没有账号？去注册</div>
 </div>
-<div class="board">
-    <div class="column todo"><h2 class="col-title">待办</h2><div id="todo"></div></div>
-    <div class="column doing"><h2 class="col-title">进行中</h2><div id="doing"></div></div>
-    <div class="column done"><h2 class="col-title">已完成</h2><div id="done"></div></div>
-</div>
-<div class="pager">
-    <button onclick="prevPage()">上一页</button>
-    <span id="pageInfo"></span>
-    <button onclick="nextPage()">下一页</button>
+
+<!-- 主看板 -->
+<div class="main" id="mainWrap">
+    <div class="topbar">
+        <h1>📋 任务看板</h1>
+        <div><span class="user" id="currentUser"></span><button class="logout" onclick="logout()">退出</button></div>
+    </div>
+    <div class="add-form">
+        <input id="title" placeholder="任务标题">
+        <input id="content" placeholder="任务详情">
+        <select id="priority"><option value="低">优先级：低</option><option value="中">优先级：中</option><option value="高">优先级：高</option></select>
+        <input id="deadline" type="datetime-local">
+        <button onclick="addTask()">添加任务</button>
+    </div>
+    <div class="board">
+        <div class="column todo"><h2 class="col-title">待办</h2><div id="todo"></div></div>
+        <div class="column doing"><h2 class="col-title">进行中</h2><div id="doing"></div></div>
+        <div class="column done"><h2 class="col-title">已完成</h2><div id="done"></div></div>
+    </div>
+    <div class="pager">
+        <button onclick="prevPage()">上一页</button>
+        <span id="pageInfo"></span>
+        <button onclick="nextPage()">下一页</button>
+    </div>
 </div>
 
 <!-- 编辑弹窗 -->
@@ -75,17 +99,9 @@
         <label>标题</label><input id="eTitle">
         <label>详情</label><input id="eContent">
         <label>状态</label>
-        <select id="eStatus">
-            <option value="待办">待办</option>
-            <option value="进行中">进行中</option>
-            <option value="已完成">已完成</option>
-        </select>
+        <select id="eStatus"><option value="待办">待办</option><option value="进行中">进行中</option><option value="已完成">已完成</option></select>
         <label>优先级</label>
-        <select id="ePriority">
-            <option value="低">低</option>
-            <option value="中">中</option>
-            <option value="高">高</option>
-        </select>
+        <select id="ePriority"><option value="低">低</option><option value="中">中</option><option value="高">高</option></select>
         <label>截止时间</label><input id="eDeadline" type="datetime-local">
         <div class="btns">
             <button class="btn-save" onclick="saveEdit()">保存</button>
@@ -98,52 +114,114 @@
     let currentPage = 1;
     const pageSize = 10;
     let editingId = null;
+    let isRegister = false;
 
-    async function loadTasks(){
-        const res = await fetch('/api/tasks?page='+currentPage+'&size='+pageSize);
+    // 请求封装：自动带token
+    async function api(url, options = {}) {
+        const headers = options.headers || {};
+        headers['Content-Type'] = 'application/json';
+        const t = localStorage.getItem('token');
+        if (t) headers['Authorization'] = 'Bearer ' + t;
+        const res = await fetch(url, { ...options, headers });
+        if (res.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            location.reload();
+            return null;
+        }
+        return res;
+    }
+
+    // 登录/注册切换
+    function toggleMode() {
+        isRegister = !isRegister;
+        document.getElementById('authTitle').textContent = isRegister ? '注册' : '登录';
+        document.getElementById('btnSubmit').textContent = isRegister ? '注册' : '登录';
+        document.getElementById('aNickname').style.display = isRegister ? 'block' : 'none';
+        document.getElementById('toggleLink').textContent = isRegister ? '已有账号？去登录' : '没有账号？去注册';
+    }
+
+    // 提交登录/注册
+    async function submitAuth() {
+        const username = document.getElementById('aUsername').value.trim();
+        const password = document.getElementById('aPassword').value.trim();
+        if (!username || !password) { alert('请输入用户名和密码'); return; }
+        const url = isRegister ? '/api/auth/register' : '/api/auth/login';
+        const body = { username, password };
+        if (isRegister) body.nickname = document.getElementById('aNickname').value.trim();
+
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         const json = await res.json();
-        if(json.code !== 200){ alert(json.msg); return; }
+        if (json.code !== 200) { alert(json.msg); return; }
+
+        if (isRegister) { alert('注册成功，请登录'); toggleMode(); return; }
+
+        localStorage.setItem('token', json.data.token);
+        localStorage.setItem('username', json.data.username);
+        showMain(json.data.username);
+    }
+
+    function showMain(username) {
+        document.getElementById('authWrap').style.display = 'none';
+        document.getElementById('mainWrap').style.display = 'block';
+        document.getElementById('currentUser').textContent = '👤 ' + (username || '');
+        loadTasks();
+    }
+
+    function logout() {
+        fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') } });
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        location.reload();
+    }
+
+    // ===== 看板逻辑 =====
+    async function loadTasks() {
+        const res = await api('/api/tasks?page=' + currentPage + '&size=' + pageSize);
+        if (!res) return;
+        const json = await res.json();
+        if (json.code !== 200) { alert(json.msg); return; }
         const data = json.data;
         const tasks = data.content;
-        document.getElementById('todo').innerHTML='';
-        document.getElementById('doing').innerHTML='';
-        document.getElementById('done').innerHTML='';
-        if(tasks.length===0){
-            document.getElementById('todo').innerHTML='<div class="empty">暂无任务</div>';
+        document.getElementById('todo').innerHTML = '';
+        document.getElementById('doing').innerHTML = '';
+        document.getElementById('done').innerHTML = '';
+        if (tasks.length === 0) {
+            document.getElementById('todo').innerHTML = '<div class="empty">暂无任务</div>';
         }
         tasks.forEach(render);
         document.getElementById('pageInfo').textContent =
-            '第 '+(data.number+1)+' / '+(data.totalPages||1)+' 页，共 '+data.totalElements+' 条';
+            '第 ' + (data.number + 1) + ' / ' + (data.totalPages || 1) + ' 页，共 ' + data.totalElements + ' 条';
     }
 
-    function priorityBadge(p){
-        if(p==='高') return '<span class="prio high">高</span>';
-        if(p==='中') return '<span class="prio mid">中</span>';
-        if(p==='低') return '<span class="prio low">低</span>';
+    function priorityBadge(p) {
+        if (p === '高') return '<span class="prio high">高</span>';
+        if (p === '中') return '<span class="prio mid">中</span>';
+        if (p === '低') return '<span class="prio low">低</span>';
         return '';
     }
 
-    function render(t){
+    function render(t) {
         let target;
-        if(t.status==='待办') target='todo';
-        else if(t.status==='进行中') target='doing';
-        else target='done';
-        const nextText = t.status==='待办' ? '开始' : (t.status==='进行中' ? '完成' : '');
-        const nextStatus = t.status==='待办' ? '进行中' : (t.status==='进行中' ? '已完成' : '待办');
+        if (t.status === '待办') target = 'todo';
+        else if (t.status === '进行中') target = 'doing';
+        else target = 'done';
+        const nextText = t.status === '待办' ? '开始' : (t.status === '进行中' ? '完成' : '');
+        const nextStatus = t.status === '待办' ? '进行中' : (t.status === '进行中' ? '已完成' : '待办');
 
         let deadlineHtml = '';
-        if(t.deadline){
+        if (t.deadline) {
             const dl = new Date(t.deadline);
-            const overdue = t.status!=='已完成' && dl < new Date();
-            const txt = dl.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
-            deadlineHtml = `<div class="dl ${overdue?'overdue':''}">⏰ ${txt}${overdue?'（已超期）':''}</div>`;
+            const overdue = t.status !== '已完成' && dl < new Date();
+            const txt = dl.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            deadlineHtml = `<div class="dl ${overdue ? 'overdue' : ''}">⏰ ${txt}${overdue ? '（已超期）' : ''}</div>`;
         }
 
         document.getElementById(target).innerHTML += `
     <div class="card">
       ${priorityBadge(t.priority)}
       <h3>${t.title}</h3>
-      <p>${t.content||''}</p>
+      <p>${t.content || ''}</p>
       ${deadlineHtml}
       <div class="btns">
         <button class="btn-next" onclick="updateStatus(${t.id},'${nextStatus}')">${nextText}</button>
@@ -153,42 +231,43 @@
     </div>`;
     }
 
-    async function addTask(){
-        const title=document.getElementById('title').value.trim();
-        const content=document.getElementById('content').value.trim();
-        const priority=document.getElementById('priority').value;
-        const deadline=document.getElementById('deadline').value || null;
-        if(!title){ alert('请填写任务标题'); return; }
-        const res = await fetch('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,content,status:'待办',priority,deadline})});
+    async function addTask() {
+        const title = document.getElementById('title').value.trim();
+        const content = document.getElementById('content').value.trim();
+        const priority = document.getElementById('priority').value;
+        const deadline = document.getElementById('deadline').value || null;
+        if (!title) { alert('请填写任务标题'); return; }
+        const res = await api('/api/tasks', { method: 'POST', body: JSON.stringify({ title, content, status: '待办', priority, deadline }) });
+        if (!res) return;
         const json = await res.json();
-        if(json.code !== 200){ alert(json.msg); return; }
-        document.getElementById('title').value='';
-        document.getElementById('content').value='';
-        document.getElementById('deadline').value='';
+        if (json.code !== 200) { alert(json.msg); return; }
+        document.getElementById('title').value = '';
+        document.getElementById('content').value = '';
+        document.getElementById('deadline').value = '';
         loadTasks();
     }
 
-    async function openEdit(id){
-        const res = await fetch('/api/tasks/'+id);
+    async function openEdit(id) {
+        const res = await api('/api/tasks/' + id);
+        if (!res) return;
         const json = await res.json();
-        if(json.code !== 200){ alert(json.msg); return; }
+        if (json.code !== 200) { alert(json.msg); return; }
         const t = json.data;
         editingId = id;
-        document.getElementById('eTitle').value = t.title||'';
-        document.getElementById('eContent').value = t.content||'';
-        document.getElementById('eStatus').value = t.status||'待办';
-        document.getElementById('ePriority').value = t.priority||'低';
-        const dl = t.deadline ? t.deadline.replace(' ','T').slice(0,16) : '';
-        document.getElementById('eDeadline').value = dl;
-        document.getElementById('editModal').style.display='block';
+        document.getElementById('eTitle').value = t.title || '';
+        document.getElementById('eContent').value = t.content || '';
+        document.getElementById('eStatus').value = t.status || '待办';
+        document.getElementById('ePriority').value = t.priority || '低';
+        document.getElementById('eDeadline').value = t.deadline ? t.deadline.replace(' ', 'T').slice(0, 16) : '';
+        document.getElementById('editModal').style.display = 'block';
     }
 
-    function closeModal(){
-        document.getElementById('editModal').style.display='none';
-        editingId=null;
+    function closeModal() {
+        document.getElementById('editModal').style.display = 'none';
+        editingId = null;
     }
 
-    async function saveEdit(){
+    async function saveEdit() {
         const obj = {
             title: document.getElementById('eTitle').value.trim(),
             content: document.getElementById('eContent').value.trim(),
@@ -196,34 +275,38 @@
             priority: document.getElementById('ePriority').value,
             deadline: document.getElementById('eDeadline').value || null
         };
-        if(!obj.title){ alert('标题不能为空'); return; }
-        await fetch('/api/tasks/'+editingId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)});
+        if (!obj.title) { alert('标题不能为空'); return; }
+        const res = await api('/api/tasks/' + editingId, { method: 'PUT', body: JSON.stringify(obj) });
+        if (!res) return;
         closeModal();
         loadTasks();
     }
 
-    async function updateStatus(id,status){
-        const res = await fetch('/api/tasks/'+id);
+    async function updateStatus(id, status) {
+        const res = await api('/api/tasks/' + id);
+        if (!res) return;
         const json = await res.json();
-        if(json.code !== 200){ alert(json.msg); return; }
+        if (json.code !== 200) { alert(json.msg); return; }
         const t = json.data;
         t.status = status;
-        await fetch('/api/tasks/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(t)});
+        await api('/api/tasks/' + id, { method: 'PUT', body: JSON.stringify(t) });
         loadTasks();
     }
 
-    async function delTask(id){
-        if(!confirm('确定删除这个任务吗？'))return;
-        await fetch('/api/tasks/'+id,{method:'DELETE'});
+    async function delTask(id) {
+        if (!confirm('确定删除这个任务吗？')) return;
+        const res = await api('/api/tasks/' + id, { method: 'DELETE' });
+        if (!res) return;
         loadTasks();
     }
 
-    function prevPage(){
-        if(currentPage > 1){ currentPage--; loadTasks(); }
-    }
-    function nextPage(){ currentPage++; loadTasks(); }
+    function prevPage() { if (currentPage > 1) { currentPage--; loadTasks(); } }
+    function nextPage() { currentPage++; loadTasks(); }
 
-    loadTasks();
+    // 启动：有token直接进看板，没有则显示登录
+    if (localStorage.getItem('token')) {
+        showMain(localStorage.getItem('username'));
+    }
 </script>
 </body>
 </html>
