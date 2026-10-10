@@ -27,6 +27,7 @@ public class JwtInterceptor implements HandlerInterceptor {
             token = token.substring(7);
             if (jwtUtil.validate(token)) {
                 request.setAttribute("username", jwtUtil.getUsername(token));
+                request.setAttribute("userId", jwtUtil.getUserId(token));
                 return true;
             }
         }

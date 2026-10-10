@@ -56,7 +56,7 @@ public class AuthController {
         if (user == null || !user.getPassword().equals(password)) {
             return Result.error("用户名或密码错误");
         }
-        String token = jwtUtil.generateToken(username);
+        String token = jwtUtil.generateToken(user.getId(), username);
         // 登录态存入Redis，24小时过期（体现Redis用法）
         redisTemplate.opsForValue().set("token:" + token, username, 24, TimeUnit.HOURS);
 

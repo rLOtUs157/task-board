@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
- * JWT令牌工具：生成token、校验token、解析用户名
+ * JWT令牌工具：生成token、校验token、解析用户名和用户ID
  */
 @Component
 public class JwtUtil {
@@ -21,10 +21,11 @@ public class JwtUtil {
     // 过期时间：24小时
     private final long expire = 1000L * 60 * 60 * 24;
 
-    // 生成token
-    public String generateToken(String username) {
+    // 生成token（携带userId和username）
+    public String generateToken(Long userId, String username) {
         return Jwts.builder()
                 .subject(username)
+                .claim("userId", userId)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expire))
                 .signWith(key)
@@ -45,5 +46,12 @@ public class JwtUtil {
     public String getUsername(String token) {
         return Jwts.parser().verifyWith(key).build()
                 .parseSignedClaims(token).getPayload().getSubject();
+    }
+
+    // 从token解析用户ID
+    public Long getUserId(String token) {
+        Object v = Jwts.parser().verifyWith(key).build()
+                .parseSignedClaims(token).getPayload().get("userId");
+        return v == null ? null : Long.valueOf(v.toString());
     }
 }

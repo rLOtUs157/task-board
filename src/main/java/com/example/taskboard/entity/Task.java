@@ -28,4 +28,6 @@ public class Task {
     private String priority; // 优先级：高/中/低
 
     private LocalDateTime deadline; // 截止时间
+
+    private Long userId; // 归属用户（数据权限隔离）
 }
